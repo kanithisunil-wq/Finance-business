@@ -2,6 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+// Added Extra
+const cors = require("cors");
+
+// Allow requests from any origin during setup, or restrict to your Vercel URL
+app.use(cors());
 
 const authRoutes = require('./routes/auth');
 const meRoutes = require('./routes/me');
