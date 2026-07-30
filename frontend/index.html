@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log in — Ledger</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="auth-shell">
+    <div class="auth-card">
+      <div class="ledger-mark"><span class="dot"></span>Ledger</div>
+      <h1>Welcome back</h1>
+      <p class="auth-sub">Log in to manage your customers and loan balances.</p>
+
+      <div class="alert alert-error" id="errorBox"></div>
+      <div class="alert alert-success" id="successBox"></div>
+
+      <form id="loginForm">
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" required autocomplete="email" placeholder="you@example.com">
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn btn-primary" id="submitBtn">Log in</button>
+      </form>
+
+      <div class="auth-links">
+        <a href="/forgot-password.html">Forgot password?</a>
+        <a href="/signup.html">Create an account</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    // If already logged in, skip straight to the home page.
+    if (getToken()) window.location.href = '/home.html';
+
+    const form = document.getElementById('loginForm');
+    const errorBox = document.getElementById('errorBox');
+    const successBox = document.getElementById('successBox');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (sessionStorage.getItem('justReset')) {
+      successBox.textContent = 'Password updated. Please log in with your new password.';
+      successBox.classList.add('show');
+      sessionStorage.removeItem('justReset');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorBox.classList.remove('show');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Logging in…';
+
+      try {
+        const data = await api('/auth/login', {
+          method: 'POST',
+          body: {
+            email: document.getElementById('email').value.trim(),
+            password: document.getElementById('password').value
+          }
+        });
+        setSession(data.token, data.user);
+        window.location.href = '/home.html';
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.classList.add('show');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Log in';
+      }
+    });
+  </script>
+</body>
+</html>

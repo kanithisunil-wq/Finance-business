@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home — Ledger</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    const user = getUser();
+    renderShell('home', `
+      <div class="page-header">
+        <div>
+          <h1>Welcome, ${escapeHtml(user ? user.name : '')}</h1>
+          <div class="sub">What would you like to work on today?</div>
+        </div>
+      </div>
+
+      <div class="nav-tile-grid">
+        <a href="/customers.html" class="nav-tile">
+          <div class="icon-wrap">${ICONS.customers}</div>
+          <div>
+            <h3>Customers</h3>
+            <p>Add, remove and review every customer's loan balance.</p>
+          </div>
+        </a>
+        <a href="/calendar.html" class="nav-tile">
+          <div class="icon-wrap">${ICONS.calendar}</div>
+          <div>
+            <h3>Calendar</h3>
+            <p>Look up every transaction recorded on a given day.</p>
+          </div>
+        </a>
+        <a href="/balance.html" class="nav-tile">
+          <div class="icon-wrap">${ICONS.balance}</div>
+          <div>
+            <h3>Balance</h3>
+            <p>See totals across all customers at a glance.</p>
+          </div>
+        </a>
+      </div>
+    `);
+  </script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer transactions — Ledger</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    const customerId = qsParam('id');
+    if (!customerId) window.location.href = '/customers.html';
+
+    renderShell('customers', `
+      <div class="page-header">
+        <div>
+          <h1 id="custName">Loading…</h1>
+          <div class="sub"><a href="/customers.html" style="color:var(--brass-dark); text-decoration:none;">&larr; Back to customers</a></div>
+        </div>
+        <div class="header-actions" style="align-items:center;">
+          <span class="balance-pill" id="balancePill">—</span>
+          <button class="btn btn-outline" id="minusBtn" style="border-color:var(--minus); color:var(--minus);">− Minus amount</button>
+          <button class="btn btn-brass" id="addBtn">+ Add amount</button>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Date &amp; time</th>
+              <th>Type</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody id="txRows">
+            <tr class="empty-row"><td colspan="3">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    `);
+
+    document.body.insertAdjacentHTML('beforeend', `
+      <div class="modal-overlay" id="txModalOverlay">
+        <div class="modal modal-wrap">
+          <button class="modal-close" id="closeTxModal">&times;</button>
+          <h2 id="txModalTitle">Add amount</h2>
+          <p class="modal-sub" id="txModalSub">Record a new transaction for this customer.</p>
+          <div class="alert alert-error" id="txErrorBox"></div>
+          <form id="txForm">
+            <div class="field">
+              <label for="tx_amount">Amount</label>
+              <input type="number" id="tx_amount" min="0.01" step="0.01" required placeholder="0.00">
+            </div>
+            <div class="field">
+              <label for="tx_date">Date &amp; time</label>
+              <input type="datetime-local" id="tx_date" required>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn btn-outline" id="cancelTxBtn">Cancel</button>
+              <button type="submit" class="btn btn-primary" id="saveTxBtn">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `);
+
+    let txType = 'ADD';
+    const overlay = document.getElementById('txModalOverlay');
+
+    function openTxModal(type) {
+      txType = type;
+      document.getElementById('txModalTitle').textContent = type === 'ADD' ? 'Add amount' : 'Minus amount';
+      document.getElementById('txModalSub').textContent = type === 'ADD'
+        ? 'Record additional amount lent to this customer.'
+        : 'Record a repayment received from this customer.';
+      document.getElementById('txErrorBox').classList.remove('show');
+      document.getElementById('txForm').reset();
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      document.getElementById('tx_date').value = now.toISOString().slice(0, 16);
+      overlay.classList.add('show');
+    }
+
+    document.getElementById('addBtn').addEventListener('click', () => openTxModal('ADD'));
+    document.getElementById('minusBtn').addEventListener('click', () => openTxModal('MINUS'));
+    document.getElementById('closeTxModal').addEventListener('click', () => overlay.classList.remove('show'));
+    document.getElementById('cancelTxBtn').addEventListener('click', () => overlay.classList.remove('show'));
+
+    document.getElementById('txForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorBox = document.getElementById('txErrorBox');
+      errorBox.classList.remove('show');
+      const saveBtn = document.getElementById('saveTxBtn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+
+      try {
+        await api('/transactions', {
+          method: 'POST',
+          body: {
+            customer_id: Number(customerId),
+            type: txType,
+            amount: document.getElementById('tx_amount').value,
+            transaction_date: document.getElementById('tx_date').value.replace('T', ' ')
+          }
+        });
+        toast('Transaction recorded.', 'success');
+        overlay.classList.remove('show');
+        await loadData();
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.classList.add('show');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      }
+    });
+
+    async function loadData() {
+      try {
+        const data = await api(`/customers/${customerId}/transactions`);
+        document.getElementById('custName').textContent = data.customer.name;
+        document.getElementById('balancePill').textContent = 'Balance: ' + formatMoney(data.customer.total_amount);
+
+        const rows = document.getElementById('txRows');
+        if (!data.transactions.length) {
+          rows.innerHTML = `<tr class="empty-row"><td colspan="3">No transactions recorded yet.</td></tr>`;
+          return;
+        }
+        rows.innerHTML = data.transactions.map(t => `
+          <tr>
+            <td>${formatDateTime(t.transaction_date)}</td>
+            <td><span class="stamp ${t.type === 'ADD' ? 'add' : 'minus'}">${t.type}</span></td>
+            <td class="num ${t.type === 'ADD' ? 'amt-add' : 'amt-minus'}">${t.type === 'ADD' ? '+' : '−'} ${formatMoney(t.amount)}</td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>

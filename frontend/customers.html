@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customers — Ledger</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    renderShell('customers', `
+      <div class="page-header">
+        <div>
+          <h1>Customers</h1>
+          <div class="sub" id="countSub">Loading…</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-outline" id="removeToggleBtn">Remove customer</button>
+          <button class="btn btn-brass" id="addCustomerBtn">+ Add customer</button>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <table>
+          <thead>
+            <tr>
+              <th class="checkbox-col" id="checkHeaderCell" style="display:none;"></th>
+              <th>Customer name</th>
+              <th>Information</th>
+              <th>Total amount</th>
+            </tr>
+          </thead>
+          <tbody id="customerRows">
+            <tr class="empty-row"><td colspan="4">Loading customers…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    `);
+
+    /* ---------------- Add Customer Modal ---------------- */
+    const modalHTML = `
+      <div class="modal-overlay" id="addModalOverlay">
+        <div class="modal modal-wrap">
+          <button class="modal-close" id="closeAddModal">&times;</button>
+          <h2>Add customer</h2>
+          <p class="modal-sub">Enter the customer's details below.</p>
+          <div class="alert alert-error" id="addErrorBox"></div>
+          <form id="addCustomerForm">
+            <div class="field">
+              <label for="c_name">Name</label>
+              <input type="text" id="c_name" required placeholder="Full name">
+            </div>
+            <div class="field">
+              <label for="c_mobile">Mobile number</label>
+              <input type="tel" id="c_mobile" required placeholder="e.g. 9876543210">
+            </div>
+            <div class="field">
+              <label for="c_nid">National ID number</label>
+              <input type="text" id="c_nid" required placeholder="National ID">
+            </div>
+            <div class="field">
+              <label for="c_loan">Initial loan amount</label>
+              <input type="number" id="c_loan" min="0" step="0.01" required placeholder="0.00">
+            </div>
+            <div class="field">
+              <label>Customer photo</label>
+              <label class="photo-upload" id="photoLabel" for="c_photo">Click to choose an image (optional)</label>
+              <input type="file" id="c_photo" accept="image/*" style="display:none;">
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn btn-outline" id="cancelAddBtn">Cancel</button>
+              <button type="submit" class="btn btn-primary" id="saveCustomerBtn">Save customer</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="modal-overlay" id="confirmDeleteOverlay">
+        <div class="modal modal-wrap" style="max-width:380px;">
+          <h2>Remove customer(s)?</h2>
+          <p class="modal-sub" id="confirmDeleteText">This will permanently delete the selected customer(s) and their transaction history.</p>
+          <div class="modal-actions">
+            <button class="btn btn-outline" id="cancelDeleteBtn">Cancel</button>
+            <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    let customers = [];
+    let removeMode = false;
+    let selectedIds = new Set();
+
+    async function loadCustomers() {
+      try {
+        customers = await api('/customers');
+        renderTable();
+      } catch (err) {
+        document.getElementById('customerRows').innerHTML =
+          `<tr class="empty-row"><td colspan="4">${escapeHtml(err.message)}</td></tr>`;
+      }
+    }
+
+    function renderTable() {
+      const rowsEl = document.getElementById('customerRows');
+      document.getElementById('countSub').textContent =
+        customers.length === 1 ? '1 customer' : `${customers.length} customers`;
+
+      if (!customers.length) {
+        rowsEl.innerHTML = `<tr class="empty-row"><td colspan="4">No customers yet. Click "Add customer" to get started.</td></tr>`;
+        return;
+      }
+
+      rowsEl.innerHTML = customers.map(c => `
+        <tr>
+          ${removeMode ? `<td class="checkbox-col"><input type="checkbox" class="rowCheck" data-id="${c.id}" ${selectedIds.has(c.id) ? 'checked' : ''}></td>` : ''}
+          <td><a class="link-cell" href="/customer-transactions.html?id=${c.id}">${escapeHtml(c.name)}</a></td>
+          <td><a class="link-cell" href="/customer-details.html?id=${c.id}">View info</a></td>
+          <td class="num">${formatMoney(c.total_amount)}</td>
+        </tr>
+      `).join('');
+
+      document.querySelectorAll('.rowCheck').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const id = Number(cb.dataset.id);
+          if (cb.checked) selectedIds.add(id); else selectedIds.delete(id);
+          updateRemoveBtnLabel();
+        });
+      });
+    }
+
+    function updateRemoveBtnLabel() {
+      const btn = document.getElementById('removeToggleBtn');
+      if (!removeMode) { btn.textContent = 'Remove customer'; return; }
+      btn.textContent = selectedIds.size ? `Delete selected (${selectedIds.size})` : 'Cancel';
+    }
+
+    document.getElementById('removeToggleBtn').addEventListener('click', () => {
+      if (removeMode && selectedIds.size) {
+        document.getElementById('confirmDeleteText').textContent =
+          `This will permanently delete ${selectedIds.size} selected customer(s) and their transaction history.`;
+        document.getElementById('confirmDeleteOverlay').classList.add('show');
+        return;
+      }
+      removeMode = !removeMode;
+      selectedIds.clear();
+      document.getElementById('checkHeaderCell').style.display = removeMode ? '' : 'none';
+      updateRemoveBtnLabel();
+      renderTable();
+    });
+
+    document.getElementById('cancelDeleteBtn').addEventListener('click', () => {
+      document.getElementById('confirmDeleteOverlay').classList.remove('show');
+    });
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+      try {
+        await api('/customers', { method: 'DELETE', body: { ids: Array.from(selectedIds) } });
+        toast('Customer(s) removed.', 'success');
+        document.getElementById('confirmDeleteOverlay').classList.remove('show');
+        removeMode = false;
+        selectedIds.clear();
+        document.getElementById('checkHeaderCell').style.display = 'none';
+        updateRemoveBtnLabel();
+        await loadCustomers();
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    });
+
+    /* ---------------- Add customer modal ---------------- */
+    const addOverlay = document.getElementById('addModalOverlay');
+    document.getElementById('addCustomerBtn').addEventListener('click', () => addOverlay.classList.add('show'));
+    document.getElementById('closeAddModal').addEventListener('click', () => addOverlay.classList.remove('show'));
+    document.getElementById('cancelAddBtn').addEventListener('click', () => addOverlay.classList.remove('show'));
+
+    const photoInput = document.getElementById('c_photo');
+    const photoLabel = document.getElementById('photoLabel');
+    photoInput.addEventListener('change', () => {
+      if (photoInput.files[0]) {
+        photoLabel.textContent = photoInput.files[0].name;
+        photoLabel.classList.add('has-file');
+      }
+    });
+
+    document.getElementById('addCustomerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorBox = document.getElementById('addErrorBox');
+      errorBox.classList.remove('show');
+      const saveBtn = document.getElementById('saveCustomerBtn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+
+      try {
+        const fd = new FormData();
+        fd.append('name', document.getElementById('c_name').value.trim());
+        fd.append('mobile_number', document.getElementById('c_mobile').value.trim());
+        fd.append('national_id_number', document.getElementById('c_nid').value.trim());
+        fd.append('initial_loan_amount', document.getElementById('c_loan').value);
+        if (photoInput.files[0]) fd.append('photo', photoInput.files[0]);
+
+        await api('/customers', { method: 'POST', body: fd, isForm: true });
+        toast('Customer added.', 'success');
+        addOverlay.classList.remove('show');
+        e.target.reset();
+        photoLabel.textContent = 'Click to choose an image (optional)';
+        photoLabel.classList.remove('has-file');
+        await loadCustomers();
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.classList.add('show');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save customer';
+      }
+    });
+
+    loadCustomers();
+  </script>
+</body>
+</html>

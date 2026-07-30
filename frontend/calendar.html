@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendar — Ledger</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    renderShell('calendar', `
+      <div class="page-header">
+        <div>
+          <h1>Select the date to see the transactions</h1>
+          <div class="sub">Days with a mark had at least one transaction recorded.</div>
+        </div>
+      </div>
+      <div class="card calendar-card">
+        <div class="calendar-nav">
+          <button id="prevMonth">&larr;</button>
+          <div class="month-label" id="monthLabel"></div>
+          <button id="nextMonth">&rarr;</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+    `);
+
+    let viewDate = new Date();
+    viewDate.setDate(1);
+
+    const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    async function renderCalendar() {
+      document.getElementById('monthLabel').textContent = `${MONTHS[viewDate.getMonth()]} ${viewDate.getFullYear()}`;
+
+      const year = viewDate.getFullYear();
+      const month = viewDate.getMonth();
+      const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+
+      let activityDays = new Set();
+      try {
+        const summary = await api(`/calendar/summary?month=${monthKey}`);
+        activityDays = new Set(summary.map(r => r.day));
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const todayStr = todayISO();
+
+      let cells = DOW.map(d => `<div class="cal-dow">${d}</div>`).join('');
+      for (let i = 0; i < firstDay; i++) cells += `<div class="cal-day empty"></div>`;
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const classes = ['cal-day'];
+        if (dateStr === todayStr) classes.push('today');
+        if (activityDays.has(dateStr)) classes.push('has-activity');
+        cells += `<div class="${classes.join(' ')}" data-date="${dateStr}">${d}</div>`;
+      }
+
+      document.getElementById('calGrid').innerHTML = cells;
+      document.querySelectorAll('.cal-day[data-date]').forEach(el => {
+        el.addEventListener('click', () => {
+          window.location.href = `/day-transactions.html?date=${el.dataset.date}`;
+        });
+      });
+    }
+
+    document.getElementById('prevMonth').addEventListener('click', () => {
+      viewDate.setMonth(viewDate.getMonth() - 1);
+      renderCalendar();
+    });
+    document.getElementById('nextMonth').addEventListener('click', () => {
+      viewDate.setMonth(viewDate.getMonth() + 1);
+      renderCalendar();
+    });
+
+    renderCalendar();
+  </script>
+</body>
+</html>

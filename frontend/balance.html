@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Balance — Ledger</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    const user = getUser();
+    renderShell('balance', `
+      <div class="page-header">
+        <div>
+          <h1>User information — ${escapeHtml(user ? user.name : '')}</h1>
+          <div class="sub">A summary of everything tracked in your ledger.</div>
+        </div>
+      </div>
+      <div class="stat-grid" id="statGrid">
+        <div class="stat-card"><div class="accent-bar"></div><div class="label">Total customers</div><div class="value">…</div></div>
+        <div class="stat-card"><div class="accent-bar"></div><div class="label">Total loan amount</div><div class="value">…</div></div>
+        <div class="stat-card"><div class="accent-bar"></div><div class="label">Total profit</div><div class="value">…</div></div>
+        <div class="stat-card"><div class="accent-bar"></div><div class="label">Net outstanding amount</div><div class="value">…</div></div>
+      </div>
+    `);
+
+    async function load() {
+      try {
+        const b = await api('/balance');
+        const grid = document.getElementById('statGrid');
+        grid.innerHTML = `
+          <div class="stat-card"><div class="accent-bar"></div><div class="label">Total customers</div><div class="value">${b.total_customers}</div></div>
+          <div class="stat-card"><div class="accent-bar"></div><div class="label">Total loan amount</div><div class="value">${formatMoney(b.total_loan_amount)}</div></div>
+          <div class="stat-card"><div class="accent-bar"></div><div class="label">Total profit</div><div class="value">${formatMoney(b.total_profit)}</div></div>
+          <div class="stat-card"><div class="accent-bar"></div><div class="label">Net outstanding amount</div><div class="value">${formatMoney(b.net_outstanding_amount)}</div></div>
+        `;
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    }
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer details — Ledger</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    const customerId = qsParam('id');
+    if (!customerId) window.location.href = '/customers.html';
+
+    renderShell('customers', `
+      <div class="page-header">
+        <div>
+          <h1>Customer details</h1>
+          <div class="sub"><a href="/customers.html" style="color:var(--brass-dark); text-decoration:none;">&larr; Back to customers</a></div>
+        </div>
+      </div>
+      <div class="card detail-card" id="detailCard">
+        <div class="loading-state">Loading customer details…</div>
+      </div>
+    `);
+
+    async function load() {
+      try {
+        const c = await api(`/customers/${customerId}`);
+        document.getElementById('detailCard').innerHTML = `
+          <img class="detail-photo" src="${c.customer_photo || ''}" onerror="this.style.visibility='hidden'" alt="">
+          <div class="detail-fields">
+            <h2 style="margin-bottom:16px;">${escapeHtml(c.name)}</h2>
+            <div class="detail-row"><span class="k">Mobile number</span><span class="v">${escapeHtml(c.mobile_number)}</span></div>
+            <div class="detail-row"><span class="k">National ID number</span><span class="v">${escapeHtml(c.national_id_number)}</span></div>
+            <div class="detail-row"><span class="k">Initial loan amount</span><span class="v num">${formatMoney(c.initial_loan_amount)}</span></div>
+            <div class="detail-row"><span class="k">Current balance</span><span class="v num">${formatMoney(c.total_amount)}</span></div>
+            <div class="detail-row"><span class="k">Customer since</span><span class="v">${formatDateTime(c.created_at)}</span></div>
+          </div>
+        `;
+      } catch (err) {
+        document.getElementById('detailCard').innerHTML = `<div class="error-state">${escapeHtml(err.message)}</div>`;
+      }
+    }
+    load();
+  </script>
+</body>
+</html>

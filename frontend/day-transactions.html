@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day transactions — Ledger</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <script src="/js/api.js"></script>
+  <script src="/js/layout.js"></script>
+  <script>
+    const date = qsParam('date');
+    if (!date) window.location.href = '/calendar.html';
+
+    renderShell('calendar', `
+      <div class="page-header">
+        <div>
+          <h1>Transactions history</h1>
+          <div class="sub" id="dateSub">${date ? formatDateLong(date) : ''}</div>
+          <div style="margin-top:6px;"><a href="/calendar.html" style="color:var(--brass-dark); text-decoration:none; font-size:13px;">&larr; Back to calendar</a></div>
+        </div>
+      </div>
+      <div class="card table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Date &amp; time</th>
+              <th>Customer name</th>
+              <th>Transaction amount</th>
+            </tr>
+          </thead>
+          <tbody id="dayRows">
+            <tr class="empty-row"><td colspan="3">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    `);
+
+    async function load() {
+      try {
+        const rows = await api(`/calendar/${date}`);
+        const el = document.getElementById('dayRows');
+        if (!rows.length) {
+          el.innerHTML = `<tr class="empty-row"><td colspan="3">No transactions were recorded on this date.</td></tr>`;
+          return;
+        }
+        el.innerHTML = rows.map(t => `
+          <tr>
+            <td>${formatDateTime(t.transaction_date)}</td>
+            <td><a class="link-cell" href="/customer-transactions.html?id=${t.customer_id}">${escapeHtml(t.customer_name)}</a></td>
+            <td class="num ${t.type === 'ADD' ? 'amt-add' : 'amt-minus'}">${t.type === 'ADD' ? '+' : '−'} ${formatMoney(t.amount)}</td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        document.getElementById('dayRows').innerHTML =
+          `<tr class="empty-row"><td colspan="3">${escapeHtml(err.message)}</td></tr>`;
+      }
+    }
+    load();
+  </script>
+</body>
+</html>
