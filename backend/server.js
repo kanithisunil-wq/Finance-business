@@ -29,6 +29,12 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
+const cors = require('cors');
+
+// Allows requests from your deployed frontend static site
+app.use(cors());
+
 // Serve uploaded customer photos
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
