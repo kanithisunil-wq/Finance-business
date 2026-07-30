@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Create account — Ledger</title>
-<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="auth-shell">
@@ -32,13 +32,13 @@
       </form>
 
       <div class="auth-links">
-        <a href="/index.html">Already have an account?</a>
+        <a href="index.html">Already have an account?</a>
         <span></span>
       </div>
     </div>
   </div>
 
-  <script src="/js/api.js"></script>
+  <script src="js/api.js"></script>
   <script>
     if (getToken()) window.location.href = '/home.html';
 
@@ -71,5 +71,10 @@
       }
     });
   </script>
+  <!-- 1. ALWAYS LOAD CONFIG FIRST -->
+<script src="js/config.js"></script>
+
+<!-- 2. Load page-specific script AFTER config -->
+<script src="js/signup.js"></script>
 </body>
 </html>

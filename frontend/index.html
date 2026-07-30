@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Log in — Ledger</title>
-<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="auth-shell">
@@ -29,13 +29,13 @@
       </form>
 
       <div class="auth-links">
-        <a href="/forgot-password.html">Forgot password?</a>
-        <a href="/signup.html">Create an account</a>
+        <a href="forgot-password.html">Forgot password?</a>
+        <a href="signup.html">Create an account</a>
       </div>
     </div>
   </div>
 
-  <script src="/js/api.js"></script>
+  <script src="js/api.js"></script>
   <script>
     // If already logged in, skip straight to the home page.
     if (getToken()) window.location.href = '/home.html';
@@ -75,5 +75,10 @@
       }
     });
   </script>
+  <!-- 1. ALWAYS LOAD CONFIG FIRST -->
+<script src="js/config.js"></script>
+
+<!-- 2. Load page-specific script AFTER config -->
+<script src="js/signup.js"></script>
 </body>
 </html>

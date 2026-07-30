@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Home — Ledger</title>
-<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <script src="/js/api.js"></script>
-  <script src="/js/layout.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/layout.js"></script>
   <script>
     const user = getUser();
     renderShell('home', `
@@ -44,5 +44,11 @@
       </div>
     `);
   </script>
+  <!-- 1. ALWAYS LOAD CONFIG FIRST -->
+<script src="js/config.js"></script>
+
+<!-- 2. Load page-specific script AFTER config -->
+<script src="js/signup.js"></script> 
+</body>
 </body>
 </html>
